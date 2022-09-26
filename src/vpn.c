@@ -479,20 +479,20 @@ static int load_key_file(Context *context, const char *file)
 
 __attribute__((noreturn)) static void usage(void)
 {
-    puts("DSVPN " VERSION_STRING
+    puts("dsv " VERSION_STRING
          " usage:\n"
          "\n"
-         "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
+         "dsv\t\"server\"\n\t<v server ip or name>|\"auto\"\n\t<v "
          "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
          "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
          "\n\n"
-         "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
+         "dsv\t\"client\"\n\t<v server ip or name>\n\t<v server "
          "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
          "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n\n"
-         "Example:\n\n[server]\n\tdd if=/dev/urandom of=vpn.key count=1 bs=32\t# create key\n"
-         "\tbase64 < vpn.key\t\t# copy key as a string\n\tsudo ./dsvpn server vpn.key\t# listen on "
-         "443\n\n[client]\n\techo ohKD...W4= | base64 --decode > vpn.key\t# paste key\n"
-         "\tsudo ./dsvpn client vpn.key 34.216.127.34\n");
+         "Example:\n\n[server]\n\tdd if=/dev/urandom of=v.key count=1 bs=32\t# create key\n"
+         "\tbase64 < v.key\t\t# copy key as a string\n\tsudo ./dsv server v.key\t# listen on "
+         "443\n\n[client]\n\techo ohKD...W4= | base64 --decode > v.key\t# paste key\n"
+         "\tsudo ./dsv client v.key 34.216.127.34\n");
     exit(254);
 }
 
