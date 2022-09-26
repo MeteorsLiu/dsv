@@ -40,7 +40,7 @@
 #ifdef __NetBSD__
 #define DEFAULT_MTU 1500
 #else
-#define DEFAULT_MTU 9000
+#define DEFAULT_MTU 1500
 #endif
 #define RECONNECT_ATTEMPTS 100
 #define TAG_LEN 6

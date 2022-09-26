@@ -5,11 +5,7 @@
 static const int POLLFD_TUN = 0, POLLFD_LISTENER = 1, POLLFD_CLIENT = 2, POLLFD_COUNT = 3;
 
 typedef struct __attribute__((aligned(16))) Buf_ {
-#if TAG_LEN < 16 - 2
-    unsigned char _pad[16 - TAG_LEN - 2];
-#endif
     unsigned char len[2];
-    unsigned char tag[TAG_LEN];
     unsigned char data[MAX_PACKET_LEN];
     size_t        pos;
 } Buf;
@@ -250,12 +246,7 @@ static int tcp_accept(Context *context, int listen_fd)
         errno = EBUSY;
         return -1;
     }
-    if (server_key_exchange(context, client_fd) != 0) {
-        fprintf(stderr, "Authentication failed\n");
-        (void) close(client_fd);
-        errno = EACCES;
-        return -1;
-    }
+
     memcpy(context->client_ip, client_ip, sizeof context->client_ip);
     return client_fd;
 }
@@ -309,8 +300,8 @@ static int client_connect(Context *context)
         firewall_rules(context, 1, 0);
     }
 #endif
-    memset(context->uc_st, 0, sizeof context->uc_st);
-    context->uc_st[context->is_server][0] ^= 1;
+    //memset(context->uc_st, 0, sizeof context->uc_st);
+    //context->uc_st[context->is_server][0] ^= 1;
     context->client_fd = tcp_client(context->server_ip, context->server_port);
     if (context->client_fd == -1) {
         perror("Client connection failed");
@@ -318,12 +309,7 @@ static int client_connect(Context *context)
     }
     fcntl(context->client_fd, F_SETFL, fcntl(context->client_fd, F_GETFL, 0) | O_NONBLOCK);
     context->congestion = 0;
-    if (client_key_exchange(context) != 0) {
-        fprintf(stderr, "Authentication failed\n");
-        client_disconnect(context);
-        sleep(1);
-        return -1;
-    }
+
     firewall_rules(context, 1, 0);
     context->fds[POLLFD_CLIENT] =
         (struct pollfd){ .fd = context->client_fd, .events = POLLIN, .revents = 0 };
@@ -403,16 +389,15 @@ static int event_loop(Context *context)
             uint16_t      binlen = endian_swap16((uint16_t) len);
 
             memcpy(tun_buf.len, &binlen, 2);
-            uc_encrypt(context->uc_st[0], tun_buf.data, len, tag_full);
-            memcpy(tun_buf.tag, tag_full, TAG_LEN);
-            writenb = safe_write_partial(context->client_fd, tun_buf.len, 2U + TAG_LEN + len);
+
+            writenb = safe_write_partial(context->client_fd, tun_buf.len, 2U + len);
             if (writenb < (ssize_t) 0) {
                 context->congestion = 1;
                 writenb             = (ssize_t) 0;
             }
-            if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
+            if (writenb != (ssize_t)(2U + len)) {
                 writenb = safe_write(context->client_fd, tun_buf.len + writenb,
-                                     2U + TAG_LEN + len - writenb, TIMEOUT);
+                                     2U + len - writenb, TIMEOUT);
             }
             if (writenb < (ssize_t) 0) {
                 perror("Unable to write data to the TCP socket");
@@ -430,27 +415,22 @@ static int event_loop(Context *context)
         ssize_t  readnb;
 
         if ((readnb = safe_read_partial(context->client_fd, client_buf->len + client_buf->pos,
-                                        2 + TAG_LEN + MAX_PACKET_LEN - client_buf->pos)) <= 0) {
+                                        2 + MAX_PACKET_LEN - client_buf->pos)) <= 0) {
             puts("Client disconnected");
             return client_reconnect(context);
         }
         client_buf->pos += readnb;
-        while (client_buf->pos >= 2 + TAG_LEN) {
+        while (client_buf->pos >= 2) {
             memcpy(&binlen, client_buf->len, 2);
             len = (ssize_t) endian_swap16(binlen);
-            if (client_buf->pos < (len_with_header = 2 + TAG_LEN + (size_t) len)) {
+            if (client_buf->pos < (len_with_header = 2 + (size_t) len)) {
                 break;
             }
-            if (uc_decrypt(context->uc_st[1], client_buf->data, len, client_buf->tag, TAG_LEN) !=
-                0) {
-                fprintf(stderr, "Corrupted stream\n");
-                sleep(1);
-                return client_reconnect(context);
-            }
+
             if (tun_write(context->tun_fd, client_buf->data, len) != len) {
                 perror("tun_write");
             }
-            if (2 + TAG_LEN + MAX_PACKET_LEN != len_with_header) {
+            if (2 + MAX_PACKET_LEN != len_with_header) {
                 unsigned char *rbuf      = client_buf->len;
                 size_t         remaining = client_buf->pos - len_with_header, i;
                 for (i = 0; i < remaining; i++) {
