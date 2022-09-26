@@ -342,10 +342,10 @@ const char *get_default_ext_if_name(void)
 int tcp_opts(int fd)
 {
     int on = 1;
-
+    
     (void) setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *) &on, sizeof on);
-    (void) setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, (char *) (unsigned int[]){ 30 });
-    (void) setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, (char *) (unsigned int[]){ 30 });
+    (void) setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, (char *) (unsigned int[]){ 30 }, sizeof(unsigned int));
+    (void) setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, (char *) (unsigned int[]){ 30 }, sizeof(unsigned int));
 #ifdef TCP_QUICKACK
     (void) setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, (char *) &on, sizeof on);
 #else
