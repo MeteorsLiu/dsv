@@ -168,7 +168,7 @@ static void client_disconnect(Context *context)
     (void) close(context->client_fd);
     context->client_fd          = -1;
     context->fds[POLLFD_CLIENT] = (struct pollfd){ .fd = -1, .events = 0 };
-    memset(context->uc_st, 0, sizeof context->uc_st);
+    //memset(context->uc_st, 0, sizeof context->uc_st);
 }
 
 static int server_key_exchange(Context *context, const int client_fd)
@@ -291,17 +291,7 @@ static int client_connect(Context *context)
 
     context->client_buf.pos = 0;
     memset(context->client_buf.data, 0, sizeof context->client_buf.data);
-#ifndef NO_DEFAULT_ROUTES
-    if (context->wanted_ext_gw_ip == NULL && (ext_gw_ip = get_default_gw_ip()) != NULL &&
-        strcmp(ext_gw_ip, context->ext_gw_ip) != 0) {
-        printf("Gateway changed from [%s] to [%s]\n", context->ext_gw_ip, ext_gw_ip);
-        firewall_rules(context, 0, 0);
-        snprintf(context->ext_gw_ip, sizeof context->ext_gw_ip, "%s", ext_gw_ip);
-        firewall_rules(context, 1, 0);
-    }
-#endif
-    //memset(context->uc_st, 0, sizeof context->uc_st);
-    //context->uc_st[context->is_server][0] ^= 1;
+
     context->client_fd = tcp_client(context->server_ip, context->server_port);
     if (context->client_fd == -1) {
         perror("Client connection failed");
@@ -546,23 +536,20 @@ int main(int argc, char *argv[])
     }
     memset(&context, 0, sizeof context);
     context.is_server = strcmp(argv[1], "server") == 0;
-    if (load_key_file(&context, argv[2]) != 0) {
-        fprintf(stderr, "Unable to load the key file [%s]\n", argv[2]);
-        return 1;
-    }
-    context.server_ip_or_name = (argc <= 3 || strcmp(argv[3], "auto") == 0) ? NULL : argv[3];
+
+    context.server_ip_or_name = (argc <= 2 || strcmp(argv[2], "auto") == 0) ? NULL : argv[2];
     if (context.server_ip_or_name == NULL && !context.is_server) {
         usage();
     }
-    context.server_port    = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
-    context.wanted_if_name = (argc <= 5 || strcmp(argv[5], "auto") == 0) ? NULL : argv[5];
-    context.local_tun_ip   = (argc <= 6 || strcmp(argv[6], "auto") == 0)
+    context.server_port    = (argc <= 3 || strcmp(argv[3], "auto") == 0) ? DEFAULT_PORT : argv[3];
+    context.wanted_if_name = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? NULL : argv[4];
+    context.local_tun_ip   = (argc <= 5 || strcmp(argv[5], "auto") == 0)
                                ? (context.is_server ? DEFAULT_SERVER_IP : DEFAULT_CLIENT_IP)
-                               : argv[6];
-    context.remote_tun_ip = (argc <= 7 || strcmp(argv[7], "auto") == 0)
+                               : argv[5];
+    context.remote_tun_ip = (argc <= 6 || strcmp(argv[6], "auto") == 0)
                                 ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
-                                : argv[7];
-    context.wanted_ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0) ? NULL : argv[8];
+                                : argv[6];
+    context.wanted_ext_gw_ip = (argc <= 7 || strcmp(argv[7], "auto") == 0) ? NULL : argv[7];
     ext_gw_ip = context.wanted_ext_gw_ip ? context.wanted_ext_gw_ip : get_default_gw_ip();
     snprintf(context.ext_gw_ip, sizeof context.ext_gw_ip, "%s", ext_gw_ip == NULL ? "" : ext_gw_ip);
     if (ext_gw_ip == NULL && !context.is_server) {
