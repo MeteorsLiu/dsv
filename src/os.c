@@ -445,7 +445,8 @@ Cmds firewall_rules_cmds(int is_server)
 #ifdef __linux__
         static const char
             *set_cmds[] =
-                { "",
+                { "ip link set dev $IF_NAME up",
+                  "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
                   NULL },
             *unset_cmds[] = {
                 "",
