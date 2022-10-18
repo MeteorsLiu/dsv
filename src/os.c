@@ -342,7 +342,9 @@ const char *get_default_ext_if_name(void)
 int tcp_opts(int fd)
 {
     int on = 1;
-    
+    int val = 10 * 1000; // 10 ms, in us. requires CAP_NET_ADMIN
+	int r = setsockopt(fd, SOL_SOCKET, SO_BUSY_POLL, &val,
+				   sizeof(val));
     (void) setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *) &on, sizeof on);
     (void) setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, (char *) (unsigned int[]){ 30 }, sizeof(unsigned int));
     (void) setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, (char *) (unsigned int[]){ 30 }, sizeof(unsigned int));
